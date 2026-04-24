@@ -126,7 +126,11 @@ const platform: Platform = {
 }
 
 if (root instanceof HTMLElement) {
-  const server: ServerConnection.Http = { type: "http", http: { url: getCurrentUrl() } }
+  // wigoh: honor the localStorage override when building the initial
+  // server entry. Upstream only uses getCurrentUrl() here (bare
+  // location.origin), so `servers` never contains our per-session URL
+  // and defaultServer's key resolution falls back to the origin.
+  const server: ServerConnection.Http = { type: "http", http: { url: getDefaultUrl() } }
   render(
     () => (
       <PlatformProvider value={platform}>
