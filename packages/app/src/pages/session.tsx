@@ -1797,7 +1797,10 @@ export default function Page() {
       {sessionSync() ?? ""}
       <SessionHeader />
       <div class="flex-1 min-h-0 flex flex-col md:flex-row">
-        <Show when={!isDesktop() && !!params.id}>
+        {/* wigoh: skip the mobile session/changes tabs in embed — review
+            panel and its counterpart tab don't exist here, and at our
+            30%-wide chat pane the breakpoint triggers otherwise. */}
+        <Show when={!(import.meta.env.BASE_URL !== "/") && !isDesktop() && !!params.id}>
           <Tabs value={store.mobileTab} class="h-auto">
             <Tabs.List>
               <Tabs.Trigger

@@ -154,10 +154,17 @@ export function SessionHeader() {
   const hotkey = createMemo(() => command.keybind("file.open"))
   const os = createMemo(() => detectOS(platform))
   const isDesktopBeta = platform.platform === "desktop" && import.meta.env.VITE_OPENCODE_CHANNEL === "beta"
-  const search = createMemo(() => !isDesktopBeta || settings.general.showSearch())
-  const tree = createMemo(() => !isDesktopBeta || settings.general.showFileTree())
-  const term = createMemo(() => !isDesktopBeta || settings.general.showTerminal())
-  const status = createMemo(() => !isDesktopBeta || settings.general.showStatus())
+  // wigoh: single flag for "mounted as an iframe inside a host app".
+  // True when Vite was built with --base=/something/ (i.e., NOT the
+  // native opencode web/desktop build at "/"). Used to hide the three
+  // right-side toggle buttons (terminal / review / file-tree) that
+  // don't belong in the Wigoh embed — everything else (sidebar, search,
+  // project nav, back/forward) still renders.
+  const isWigohEmbed = import.meta.env.BASE_URL !== "/"
+  const search = createMemo(() => !isWigohEmbed && (!isDesktopBeta || settings.general.showSearch()))
+  const tree = createMemo(() => !isWigohEmbed && (!isDesktopBeta || settings.general.showFileTree()))
+  const term = createMemo(() => !isWigohEmbed && (!isDesktopBeta || settings.general.showTerminal()))
+  const status = createMemo(() => !isWigohEmbed && (!isDesktopBeta || settings.general.showStatus()))
 
   const [exists, setExists] = createStore<Partial<Record<OpenApp, boolean>>>({
     finder: true,
@@ -312,7 +319,7 @@ export function SessionHeader() {
         {(mount) => (
           <Portal mount={mount()}>
             <div class="flex items-center gap-2">
-              <Show when={projectDirectory()}>
+              <Show when={!isWigohEmbed && projectDirectory()}>
                 <div class="hidden xl:flex items-center">
                   <Show
                     when={canOpen()}
@@ -450,21 +457,23 @@ export function SessionHeader() {
                 </Show>
 
                 <div class="hidden md:flex items-center gap-1 shrink-0">
-                  <TooltipKeybind
-                    title={language.t("command.review.toggle")}
-                    keybind={command.keybind("review.toggle")}
-                  >
-                    <Button
-                      variant="ghost"
-                      class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
-                      onClick={() => view().reviewPanel.toggle()}
-                      aria-label={language.t("command.review.toggle")}
-                      aria-expanded={view().reviewPanel.opened()}
-                      aria-controls="review-panel"
+                  <Show when={!isWigohEmbed}>
+                    <TooltipKeybind
+                      title={language.t("command.review.toggle")}
+                      keybind={command.keybind("review.toggle")}
                     >
-                      <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
-                    </Button>
-                  </TooltipKeybind>
+                      <Button
+                        variant="ghost"
+                        class="group/review-toggle titlebar-icon w-8 h-6 p-0 box-border"
+                        onClick={() => view().reviewPanel.toggle()}
+                        aria-label={language.t("command.review.toggle")}
+                        aria-expanded={view().reviewPanel.opened()}
+                        aria-controls="review-panel"
+                      >
+                        <Icon size="small" name={view().reviewPanel.opened() ? "review-active" : "review"} />
+                      </Button>
+                    </TooltipKeybind>
+                  </Show>
 
                   <Show when={tree()}>
                     <TooltipKeybind
