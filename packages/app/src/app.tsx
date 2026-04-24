@@ -296,6 +296,13 @@ export function AppInterface(props: {
               <GlobalSyncProvider>
                 <Dynamic
                   component={props.router ?? Router}
+                  // wigoh: when the app is built with a Vite base (we ship
+                  // it under /chat-ui/ on wigoh.dev), Solid router must
+                  // strip that prefix before matching routes; otherwise
+                  // every URL matches `/:dir` with dir="chat-ui". Trailing
+                  // slash stripped because Solid expects "/chat-ui" not
+                  // "/chat-ui/".
+                  base={import.meta.env.BASE_URL.replace(/\/$/, "")}
                   root={(routerProps) => <RouterRoot appChildren={props.children}>{routerProps.children}</RouterRoot>}
                 >
                   <Route path="/" component={HomeRoute} />
