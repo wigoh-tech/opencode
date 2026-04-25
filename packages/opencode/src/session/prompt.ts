@@ -42,7 +42,7 @@ import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Truncate } from "@/tool"
-import { decodeDataUrl } from "@/util/data-url"
+import { decodeDataUrl, decodeDataUrlBytes, extForMime } from "@/util/data-url"
 import { Process } from "@/util"
 import { Cause, Effect, Exit, Layer, Option, Scope, Context, Schema } from "effect"
 import { zod } from "@/util/effect-zod"
@@ -1042,7 +1042,27 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                   { ...part, messageID: info.id, sessionID: input.sessionID },
                 ]
               }
-              break
+              {
+                // Materialize binary attachments to disk so the model's bash /
+                // CLI tools can reference them by path. The original `part` is
+                // still returned so vision context is preserved.
+                const bytes = decodeDataUrlBytes(part.url)
+                const dir = path.join(os.tmpdir(), "opencode-attachments", input.sessionID)
+                const safeName = (part.filename ?? `${part.id}.${extForMime(part.mime)}`).replace(/[^\w.\-]/g, "_")
+                const filepath = path.join(dir, `${part.id}-${safeName}`)
+                yield* fsys.ensureDir(dir).pipe(Effect.catch(Effect.die))
+                yield* fsys.writeFile(filepath, bytes).pipe(Effect.catch(Effect.die))
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `User attached "${safeName}" (${part.mime}). Saved to ${filepath} — use this path with bash/wp-cli/etc. The same file is also available in vision context.`,
+                  },
+                  { ...part, messageID: info.id, sessionID: input.sessionID },
+                ]
+              }
             case "file:": {
               log.info("file", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
